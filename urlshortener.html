@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple URL Shortener</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">URL Shortener</h1>
+
+        <div class="mb-6">
+            <label for="longUrlInput" class="block text-gray-700 text-sm font-semibold mb-2">Enter Long URL:</label>
+            <input type="url" id="longUrlInput" placeholder="e.g., https://www.example.com/very/long/address"
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+                   required>
+        </div>
+
+        <button id="shortenBtn"
+                class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 transform hover:scale-105">
+            Shorten URL
+        </button>
+
+        <div id="resultSection" class="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200 hidden">
+            <label class="block text-blue-800 text-sm font-semibold mb-2">Shortened URL:</label>
+            <div class="flex items-center space-x-2">
+                <input type="text" id="shortUrlDisplay" readonly
+                       class="flex-grow px-3 py-2 bg-blue-100 border border-blue-300 rounded-lg text-blue-900 font-mono text-sm overflow-hidden whitespace-nowrap overflow-ellipsis">
+                <button id="copyBtn"
+                        class="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-75 transition duration-300 transform hover:scale-105">
+                    Copy
+                </button>
+            </div>
+            <p id="copyMessage" class="text-green-600 text-xs mt-2 hidden">Copied to clipboard!</p>
+        </div>
+
+        <div class="mt-8 border-t pt-6 border-gray-200">
+            <h2 class="text-xl font-bold text-center text-gray-800 mb-4">Resolve Short URL</h2>
+            <div class="mb-4">
+                <label for="shortUrlResolveInput" class="block text-gray-700 text-sm font-semibold mb-2">Enter Short URL:</label>
+                <input type="text" id="shortUrlResolveInput" placeholder="e.g., abc123"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200">
+            </div>
+            <button id="resolveBtn"
+                    class="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-75 transition duration-300 transform hover:scale-105">
+                Resolve URL
+            </button>
+            <div id="resolvedResult" class="mt-4 p-3 bg-purple-50 rounded-lg border border-purple-200 hidden">
+                <label class="block text-purple-800 text-sm font-semibold mb-2">Original URL:</label>
+                <p id="originalUrlDisplay" class="text-purple-900 font-mono text-sm break-words"></p>
+            </div>
+            <p id="resolveMessage" class="text-red-600 text-xs mt-2 hidden">Short URL not found.</p>
+        </div>
+    </div>
+
+    <script>
+        const urlMappings = new Map();
+
+        const longUrlInput = document.getElementById('longUrlInput');
+        const shortenBtn = document.getElementById('shortenBtn');
+        const resultSection = document.getElementById('resultSection');
+        const shortUrlDisplay = document.getElementById('shortUrlDisplay');
+        const copyBtn = document.getElementById('copyBtn');
+        const copyMessage = document.getElementById('copyMessage');
+
+        const shortUrlResolveInput = document.getElementById('shortUrlResolveInput');
+        const resolveBtn = document.getElementById('resolveBtn');
+        const resolvedResult = document.getElementById('resolvedResult');
+        const originalUrlDisplay = document.getElementById('originalUrlDisplay');
+        const resolveMessage = document.getElementById('resolveMessage');
+
+        function generateShortCode() {
+            const timestampPart = Date.now().toString(36);
+            const randomPart = Math.random().toString(36).substring(2, 8);
+            return (timestampPart + randomPart).substring(0, 7);
+        }
+
+        shortenBtn.addEventListener('click', () => {
+            const longUrl = longUrlInput.value.trim();
+
+            if (longUrl) {
+                let shortCode = generateShortCode();
+                let attempts = 0;
+                while (urlMappings.has(shortCode) && attempts < 10) {
+                    shortCode = generateShortCode();
+                    attempts++;
+                }
+
+                if (urlMappings.has(shortCode)) {
+                    alert('Could not generate a unique short URL. Please try again.');
+                    return;
+                }
+
+                urlMappings.set(shortCode, longUrl);
+                shortUrlDisplay.value = shortCode;
+                resultSection.classList.remove('hidden');
+                copyMessage.classList.add('hidden');
+            } else {
+                alert('Please enter a valid URL.');
+            }
+        });
+
+        copyBtn.addEventListener('click', () => {
+            const shortUrl = shortUrlDisplay.value;
+            if (shortUrl) {
+                const tempInput = document.createElement('input');
+                tempInput.value = shortUrl;
+                document.body.appendChild(tempInput);
+                tempInput.select();
+                document.execCommand('copy');
+                document.body.removeChild(tempInput);
+
+                copyMessage.classList.remove('hidden');
+                setTimeout(() => {
+                    copyMessage.classList.add('hidden');
+                }, 2000);
+            }
+        });
+
+        resolveBtn.addEventListener('click', () => {
+            const shortCodeToResolve = shortUrlResolveInput.value.trim();
+            resolvedResult.classList.add('hidden');
+            resolveMessage.classList.add('hidden');
+
+            if (shortCodeToResolve) {
+                const originalUrl = urlMappings.get(shortCodeToResolve);
+                if (originalUrl) {
+                    originalUrlDisplay.textContent = originalUrl;
+                    resolvedResult.classList.remove('hidden');
+                } else {
+                    resolveMessage.classList.remove('hidden');
+                }
+            } else {
+                alert('Please enter a short URL to resolve.');
+            }
+        });
+    </script>
+</body>
+</html>
